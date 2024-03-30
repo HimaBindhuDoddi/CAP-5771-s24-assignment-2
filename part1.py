@@ -16,6 +16,10 @@ import math
 from sklearn.cluster import AgglomerativeClustering
 import pickle
 import utils as u
+from sklearn.cluster import KMeans
+from matplotlib.backends.backend_pdf import PdfPages
+
+warnings.filterwarnings("ignore")
 
 
 # ----------------------------------------------------------------------
@@ -29,8 +33,20 @@ In the first task, you will explore how k-Means perform on datasets with diverse
 # Change the arguments and return according to 
 # the question asked. 
 
-def fit_kmeans():
-    return None
+def fit_kmeans(input_data, num_clusters):
+    
+    features, targets = input_data
+    
+    scaler = StandardScaler()
+    scaled_features = scaler.fit_transform(features)
+    
+    kmeans = KMeans(n_clusters=num_clusters, init='random', random_state=42)
+    kmeans.fit(scaled_features, targets)
+    
+    predicted_labels = kmeans.predict(scaled_features)
+    
+    return predicted_labels
+    
 
 
 def compute():
@@ -42,7 +58,30 @@ def compute():
 
     # Dictionary of 5 datasets. e.g., dct["nc"] = [data, labels]
     # 'nc', 'nm', 'bvv', 'add', 'b'. keys: 'nc', 'nm', 'bvv', 'add', 'b' (abbreviated datasets)
+    
+    seed = 42
+    n_samples = 100
     dct = answers["1A: datasets"] = {}
+    nc = datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed)
+    dct["nc"] = [nc]
+    
+    nm = datasets.make_moons(n_samples=n_samples, noise=0.05, random_state=seed)
+    dct["nm"] = [nm]
+    
+    bvv = datasets.make_blobs(n_samples=n_samples, cluster_std=[1.0, 2.5, 0.5], random_state=seed)
+    dct["bvv"] =[bvv]
+    
+    X, y = datasets.make_blobs(n_samples=n_samples, random_state=seed)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X_aniso = np.dot(X, transformation)
+    add = (X_aniso, y)
+    dct["add"] =[add]
+    
+    b = datasets.make_blobs(n_samples=n_samples, random_state=seed)
+    dct["b"] =[b]
+     
+    
+   
 
     """
    B. Write a function called fit_kmeans that takes dataset (before any processing on it), i.e., pair of (data, label) Numpy arrays, and the number of clusters as arguments, and returns the predicted labels from k-means clustering. Use the init='random' argument and make sure to standardize the data (see StandardScaler transform), prior to fitting the KMeans estimator. This is the function you will use in the following questions. 
@@ -61,17 +100,109 @@ def compute():
     # dct value: return a dictionary of one or more abbreviated dataset names (zero or more elements) 
     # and associated k-values with correct clusters.  key abbreviations: 'nc', 'nm', 'bvv', 'add', 'b'. 
     # The values are the list of k for which there is success. Only return datasets where the list of cluster size k is non-empty.
-    dct = answers["1C: cluster successes"] = {"xy": [3,4], "zx": [2]} 
+    
+    dataset = {
+    "nc": nc,
+    "nm": nm,
+    "bvv": bvv,
+    "add": add,
+    "b": b
+    }
+
+    cluster_counts = [2, 3, 5, 10]
+    dataset_keys = ['nc', 'nm', 'bvv', 'add', 'b']
+    pdf_filename = "cluster_report_1C.pdf"
+    pdf_pages = []
+    
+    successful_clusters = {}
+    failed_clusters = []
+    
+    fig, axes = plt.subplots(len(cluster_counts), len(dataset_keys), figsize=(20, 16))
+    fig.suptitle('Scatter plots for different datasets and number of clusters', fontsize=16)
+    
+    for j, key in enumerate(dataset_keys):
+        data, true_labels = dataset[key]
+    
+        for i, cluster_count in enumerate(cluster_counts):
+            predicted_labels = fit_kmeans(dataset[key],num_clusters=cluster_count)
+    
+            ax = axes[i, j]
+            ax.scatter(data[:, 0], data[:, 1], c=predicted_labels, cmap='viridis')
+            ax.set_title(f'{key}, k={cluster_count}')
+    
+            if len(set(predicted_labels)) == len(set(true_labels)):
+                if key in successful_clusters:
+                    successful_clusters[key].append(cluster_count)
+                else:
+                    successful_clusters[key] = [cluster_count]
+            else:
+                failed_clusters.append(key)
+    
+    plt.tight_layout()
+    pdf_pages.append(fig)
+    plt.close(fig)
+    
+    with PdfPages(pdf_filename) as pdf:
+        for page in pdf_pages:
+            pdf.savefig(page)
+    
+
+    
+    dct = answers["1C: cluster successes"] = {"bvv": [2,3], "add": [2,3],"b":[2,3]}
 
     # dct value: return a list of 0 or more dataset abbreviations (list has zero or more elements, 
     # which are abbreviated dataset names as strings)
-    dct = answers["1C: cluster failures"] = ["xy"]
+    dct = answers["1C: cluster failures"] = ["nc","nm"]
 
     """
     D. Repeat 1.C a few times and comment on which (if any) datasets seem to be sensitive to the choice of initialization for the k=2,3 cases. You do not need to add the additional plots to your report.
 
     Create a pdf of the plots and return in your report. 
     """
+    dataset = {
+    "nc": nc,
+    "nm": nm,
+    "bvv": bvv,
+    "add": add,
+    "b": b
+    }
+    cluster_counts = [2, 3, 5, 10]
+    dataset_keys = ['nc', 'nm', 'bvv', 'add', 'b']
+    
+    for ii in range(5):
+        successful_clusters = {}
+        failed_clusters = []
+        pdf_filename = f"cluster_report_1D_{ii+1}.pdf"
+
+        fig, axes = plt.subplots(len(cluster_counts), len(dataset_keys), figsize=(20, 16))
+        fig.suptitle('Scatter plots for different datasets and number of clusters', fontsize=16)
+
+        for j, key in enumerate(dataset_keys):
+            data, true_labels = dataset[key]
+
+            for i, cluster_count in enumerate(cluster_counts):
+                predicted_labels = fit_kmeans(dataset[key], num_clusters=cluster_count)
+
+                ax = axes[i, j]
+                ax.scatter(data[:, 0], data[:, 1], c=predicted_labels, cmap='viridis')
+                ax.set_title(f'{key}, k={cluster_count}')
+
+                if len(set(predicted_labels)) == len(set(true_labels)):
+                    if key in successful_clusters:
+                        successful_clusters[key].append(cluster_count)
+                    else:
+                        successful_clusters[key] = [cluster_count]
+                else:
+                    failed_clusters.append(key)
+
+        plt.tight_layout()
+        pdf_pages.append(fig)
+        plt.close(fig)
+
+        with PdfPages(pdf_filename) as pdf:
+            for page in pdf_pages:
+                pdf.savefig(page)
+
 
     # dct value: list of dataset abbreviations
     # Look at your plots, and return your answers.
