@@ -46,6 +46,20 @@ def fit_kmeans(input_data, num_clusters):
     predicted_labels = kmeans.predict(scaled_features)
     
     return predicted_labels
+
+def fit_kmeans_d(input_data, num_clusters):
+    
+    features, targets = input_data
+    
+    scaler = StandardScaler()
+    scaled_features = scaler.fit_transform(features)
+    
+    kmeans = KMeans(n_clusters=num_clusters, init='random')
+    kmeans.fit(scaled_features, targets)
+    
+    predicted_labels = kmeans.predict(scaled_features)
+    
+    return predicted_labels
     
 
 
@@ -130,14 +144,6 @@ def compute():
             ax.scatter(data[:, 0], data[:, 1], c=predicted_labels, cmap='viridis')
             ax.set_title(f'{key}, k={cluster_count}')
     
-            if len(set(predicted_labels)) == len(set(true_labels)):
-                if key in successful_clusters:
-                    successful_clusters[key].append(cluster_count)
-                else:
-                    successful_clusters[key] = [cluster_count]
-            else:
-                failed_clusters.append(key)
-    
     plt.tight_layout()
     pdf_pages.append(fig)
     plt.close(fig)
@@ -148,7 +154,7 @@ def compute():
     
 
     
-    dct = answers["1C: cluster successes"] = {"bvv": [2,3], "add": [2,3],"b":[2,3]}
+    dct = answers["1C: cluster successes"] = {"bvv": [3], "add": [3],"b":[3]}
 
     # dct value: return a list of 0 or more dataset abbreviations (list has zero or more elements, 
     # which are abbreviated dataset names as strings)
@@ -166,13 +172,14 @@ def compute():
     "add": add,
     "b": b
     }
-    cluster_counts = [2, 3, 5, 10]
+    cluster_counts = [2, 3]
     dataset_keys = ['nc', 'nm', 'bvv', 'add', 'b']
     
     for ii in range(5):
         successful_clusters = {}
         failed_clusters = []
         pdf_filename = f"cluster_report_1D_{ii+1}.pdf"
+        pdf_pages = []
 
         fig, axes = plt.subplots(len(cluster_counts), len(dataset_keys), figsize=(20, 16))
         fig.suptitle('Scatter plots for different datasets and number of clusters', fontsize=16)
@@ -181,19 +188,11 @@ def compute():
             data, true_labels = dataset[key]
 
             for i, cluster_count in enumerate(cluster_counts):
-                predicted_labels = fit_kmeans(dataset[key], num_clusters=cluster_count)
+                predicted_labels = fit_kmeans_d(dataset[key], num_clusters=cluster_count)
 
                 ax = axes[i, j]
                 ax.scatter(data[:, 0], data[:, 1], c=predicted_labels, cmap='viridis')
                 ax.set_title(f'{key}, k={cluster_count}')
-
-                if len(set(predicted_labels)) == len(set(true_labels)):
-                    if key in successful_clusters:
-                        successful_clusters[key].append(cluster_count)
-                    else:
-                        successful_clusters[key] = [cluster_count]
-                else:
-                    failed_clusters.append(key)
 
         plt.tight_layout()
         pdf_pages.append(fig)
@@ -207,7 +206,7 @@ def compute():
     # dct value: list of dataset abbreviations
     # Look at your plots, and return your answers.
     # The plot is part of your report, a pdf file name "report.pdf", in your repository.
-    dct = answers["1D: datasets sensitive to initialization"] = [""]
+    dct = answers["1D: datasets sensitive to initialization"] = ["nc"]
 
     return answers
 
